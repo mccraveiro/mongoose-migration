@@ -1,0 +1,34 @@
+{
+  "name": "mongoose-migration",
+  "version": "0.0.1",
+  "description": "Data migration tool for Mongoose",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "migrate": "./bin/migrate.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mccraveiro/mongoose-migration.git"
+  },
+  "keywords": [
+    "mongoose",
+    "migration",
+    "migrate"
+  ],
+  "author": "Mateus Craveiro <mccraveiro@gmail.com>",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/mccraveiro/mongoose-migration/issues"
+  },
+  "homepage": "https://github.com/mccraveiro/mongoose-migration",
+  "dependencies": {
+    "commander": "^2.5.0",
+    "slug": "^0.8.0",
+    "prompt": "^0.2.14",
+    "colors": "^1.0.3",
+    "mongoose": "^3.8.19"
+  }
+}
