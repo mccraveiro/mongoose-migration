@@ -23,13 +23,12 @@ if (program.init) {
   process.exit();
 }
 
-CONFIG = loadConfig();
+CONFIG = loadConfiguration();
 
 // migrate create
 if (program.create) {
   if (program.create === true) {
-    console.error('Missing migration description'.red);
-    process.exit(1);
+    error('Missing migration description');
   }
   createMigration(program.create);
   process.exit();
@@ -51,12 +50,24 @@ else {
   program.help();
 }
 
-function loadConfig() {
+/*
+ *  Helpers
+ */
+
+function error(msg) {
+  console.error(msg.red);
+  process.exit(1);
+}
+
+function success(msg) {
+  console.log(msg.green);
+}
+
+function loadConfiguration() {
   try {
     return require(config_path);
   } catch (e) {
-    console.error(('Missing ' + config_filename + ' file. Type `migrate init` to create.').red);
-    process.exit(1);
+    error('Missing ' + config_filename + ' file. Type `migrate init` to create.');
   }
 }
 
@@ -68,8 +79,7 @@ function updateTimestamp(timestamp) {
 
 function init() {
   if (fs.existsSync(config_path)) {
-    console.error((config_filename + ' already exists!').red);
-    process.exit(1);
+    error(config_filename + ' already exists!');
   }
 
   var schema = {
@@ -99,8 +109,7 @@ function init() {
     var data = JSON.stringify(CONFIG, null, 2);
     fs.writeFileSync(config_path, data);
 
-    console.log((config_filename + ' file created!').green);
-    console.log('Edit it to include your models definitions'.green);
+    success(config_filename + ' file created!\nEdit it to include your models definitions');
   });
 }
 
@@ -117,19 +126,21 @@ function createMigration(description) {
   fs.createReadStream(__dirname + '/../template/migration.js')
     .pipe(fs.createWriteStream(CONFIG.basepath + '/' + filename));
 
-  console.log('Created migration', filename);
+  success('Created migration ' + filename);
 }
 
 function connnectDB() {
   // load local app mongoose instance
   var mongoose = require(process.cwd() + '/node_modules/mongoose');
-
   mongoose.connect(CONFIG.connection);
-  mongoose.set('debug', true);
 }
 
 function loadModel(model_name) {
   return require(process.cwd() + '/' + CONFIG.models[model_name]);
+}
+
+function getTimestamp(name) {
+  return parseInt((name.split('-'))[0]);
 }
 
 function migrate(direction, cb) {
@@ -137,42 +148,40 @@ function migrate(direction, cb) {
 
   connnectDB();
 
-  if (direction > 0) {
-    migrations = migrations.filter(function (migration_name) {
-      var timestamp = parseInt((migration_name.split('-'))[0]);
-      return timestamp > CONFIG.current_timestamp;
-    });
-  } else if (direction < 0) {
-    migrations = migrations.filter(function (migration_name) {
-      var timestamp = parseInt((migration_name.split('-'))[0]);
-      return timestamp <= CONFIG.current_timestamp;
-    });
-  }
+  migrations = migrations.filter(function (migration_name) {
+    var timestamp = getTimestamp(migration_name);
 
-  loopmigrations(direction, migrations, cb);
+    if (direction > 0) {
+      return timestamp > CONFIG.current_timestamp;
+    } else if (direction < 0) {
+      return timestamp <= CONFIG.current_timestamp;
+    }
+  });
+
+  loopMigrations(direction, migrations, cb);
 }
 
-function loopmigrations(direction, migrations, cb) {
+function loopMigrations(direction, migrations, cb) {
   if (direction > 0 && migrations.length !== 0) {
-    apply_migration('up', migrations.shift(), function () {
+    applyMigration('up', migrations.shift(), function () {
       direction--;
-      loopmigrations(direction, migrations, cb);
+      loopMigrations(direction, migrations, cb);
     });
   } else if (direction < 0 && migrations.length !== 0) {
-    apply_migration('down', migrations.pop(), function () {
+    applyMigration('down', migrations.pop(), function () {
       direction++;
-      loopmigrations(direction, migrations, cb);
+      loopMigrations(direction, migrations, cb);
     });
   } else {
     cb();
   }
 }
 
-function apply_migration(direction, name, cb) {
+function applyMigration(direction, name, cb) {
   var migration = require(process.cwd() + '/' + CONFIG.basepath + '/' + name);
-  var timestamp = parseInt((name.split('-'))[0]);
+  var timestamp = getTimestamp(name);
 
-  console.log(('Applying migration ' + name + ' - ' + direction).yellow);
+  success('Applying migration ' + name + ' - ' + direction);
   migration[direction].call({
     model: loadModel
   }, callback);
