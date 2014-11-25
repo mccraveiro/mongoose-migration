@@ -14,8 +14,8 @@ var CONFIG;
 program
   .option('init', 'Init migrations on current path')
   .option('create [description]', 'Create Migration')
-  .option('down', 'Migrate down')
-  .option('up', 'Migrate up')
+  .option('down [number_of_migrations] (default = 1)', 'Migrate down')
+  .option('up   [number_of_migrations] (default = 1)', 'Migrate up (default command)')
   .parse(process.argv);
 
 // migrate init
@@ -34,19 +34,21 @@ if (program.create) {
 }
 // migrate down
 else if (program.down) {
-  migrate(-1, function () {
+  migrate('down', program.down, function () {
     process.exit();
   });
 }
 // migrate up
 else if (program.up) {
-  migrate(1, function () {
+  migrate('up', program.up, function () {
     process.exit();
   });
 }
-// otherwise show help message
+// otherwise migrate all the way up
 else {
-  program.help();
+  migrate('up', Number.POSITIVE_INFINITY, function () {
+    process.exit();
+  });
 }
 
 /*
@@ -139,6 +141,7 @@ function connnectDB() {
   // load local app mongoose instance
   var mongoose = require(process.cwd() + '/node_modules/mongoose');
   mongoose.connect(CONFIG.connection);
+  // mongoose.set('debug', true);
 }
 
 function loadModel(model_name) {
@@ -149,7 +152,15 @@ function getTimestamp(name) {
   return parseInt((name.split('-'))[0]);
 }
 
-function migrate(direction, cb) {
+function migrate(direction, number_of_migrations, cb) {
+  if (!number_of_migrations || number_of_migrations === true) {
+    number_of_migrations = 1;
+  }
+
+  if (direction == 'down') {
+    number_of_migrations = -1 * number_of_migrations;
+  }
+
   var migrations = fs.readdirSync(CONFIG.basepath);
 
   connnectDB();
@@ -157,14 +168,14 @@ function migrate(direction, cb) {
   migrations = migrations.filter(function (migration_name) {
     var timestamp = getTimestamp(migration_name);
 
-    if (direction > 0) {
+    if (number_of_migrations > 0) {
       return timestamp > CONFIG.current_timestamp;
-    } else if (direction < 0) {
+    } else if (number_of_migrations < 0) {
       return timestamp <= CONFIG.current_timestamp;
     }
   });
 
-  loopMigrations(direction, migrations, cb);
+  loopMigrations(number_of_migrations, migrations, cb);
 }
 
 function loopMigrations(direction, migrations, cb) {
