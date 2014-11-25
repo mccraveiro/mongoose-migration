@@ -4,6 +4,7 @@ var program = require('commander');
 var prompt = require('prompt');
 var colors = require('colors');
 var slug = require('slug');
+var path = require('path');
 var fs = require('fs');
 
 var config_filename = '.migrate.json';
@@ -27,11 +28,9 @@ CONFIG = loadConfiguration();
 
 // migrate create
 if (program.create) {
-  if (program.create === true) {
-    error('Missing migration description');
-  }
-  createMigration(program.create);
-  process.exit();
+  createMigration(program.create, function () {
+    process.exit();
+  });
 }
 // migrate down
 else if (program.down) {
@@ -113,20 +112,27 @@ function init() {
   });
 }
 
-function createMigration(description) {
+function createMigration(description, cb) {
+
+  if (!description || description === true) {
+    error('Missing migration description');
+  }
+
   var timestamp = Date.now();
   var description = slug(description);
-  var filename = timestamp + '-' + description + '.js';
+  var migrationName = timestamp + '-' + description + '.js';
+  var template = path.normalize(__dirname + '/../template/migration.js');
+  var filename = path.normalize(CONFIG.basepath + '/' + migrationName);
 
   // create migrations directory
   if (!fs.existsSync(CONFIG.basepath)){
     fs.mkdirSync(CONFIG.basepath);
   }
 
-  fs.createReadStream(__dirname + '/../template/migration.js')
-    .pipe(fs.createWriteStream(CONFIG.basepath + '/' + filename));
-
-  success('Created migration ' + filename);
+  var data = fs.readFileSync(template);
+  fs.writeFileSync(filename, data);
+  success('Created migration ' + migrationName);
+  cb();
 }
 
 function connnectDB() {
