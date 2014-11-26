@@ -1,8 +1,10 @@
 #! /usr/bin/env node
 
+'use strict';
+
 var program = require('commander');
 var prompt = require('prompt');
-var colors = require('colors');
+var colors = require('colors/safe');
 var slug = require('slug');
 var path = require('path');
 var fs = require('fs');
@@ -56,12 +58,12 @@ else {
  */
 
 function error(msg) {
-  console.error(msg.red);
+  console.error(colors.red(msg));
   process.exit(1);
 }
 
 function success(msg) {
-  console.log(msg.green);
+  console.log(colors.green(msg));
 }
 
 function loadConfiguration() {
@@ -121,8 +123,7 @@ function createMigration(description, cb) {
   }
 
   var timestamp = Date.now();
-  var description = slug(description);
-  var migrationName = timestamp + '-' + description + '.js';
+  var migrationName = timestamp + '-' + slug(description) + '.js';
   var template = path.normalize(__dirname + '/../template/migration.js');
   var filename = path.normalize(CONFIG.basepath + '/' + migrationName);
 
