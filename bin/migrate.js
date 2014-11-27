@@ -14,43 +14,31 @@ var config_path = process.cwd() + '/' + config_filename;
 var CONFIG;
 
 program
-  .option('init', 'Init migrations on current path')
-  .option('create [description]', 'Create Migration')
-  .option('down [number_of_migrations] (default = 1)', 'Migrate down')
-  .option('up   [number_of_migrations] (default = 1)', 'Migrate up (default command)')
-  .parse(process.argv);
+  .command('init')
+  .description('Init migrations on current path')
+  .action(init);
 
-// migrate init
-if (program.init) {
-  init();
-  process.exit();
-}
+program
+  .command('create <description>')
+  .description('Create Migration')
+  .action(createMigration);
 
-CONFIG = loadConfiguration();
+program
+  .command('down [number_of_migrations] (default = 1)')
+  .description('Migrate down')
+  .action(migrate.bind(null, 'down', process.exit));
 
-// migrate create
-if (program.create) {
-  createMigration(program.create, function () {
-    process.exit();
-  });
-}
-// migrate down
-else if (program.down) {
-  migrate('down', program.down, function () {
-    process.exit();
-  });
-}
-// migrate up
-else if (program.up) {
-  migrate('up', program.up, function () {
-    process.exit();
-  });
-}
-// otherwise migrate all the way up
-else {
-  migrate('up', Number.POSITIVE_INFINITY, function () {
-    process.exit();
-  });
+program
+  .command('up [number_of_migrations]')
+  .description('Migrate up (default command)')
+  .action(migrate.bind(null, 'up', process.exit));
+
+program.version(require('../package.json').version);
+program.parse(process.argv);
+
+// Default command ?
+if (program.rawArgs.length < 3) {
+  migrate('up', process.exit, Number.POSITIVE_INFINITY);
 }
 
 /*
@@ -113,14 +101,13 @@ function init() {
     fs.writeFileSync(config_path, data);
 
     success(config_filename + ' file created!\nEdit it to include your models definitions');
+    process.exit();
   });
 }
 
-function createMigration(description, cb) {
+function createMigration(description) {
 
-  if (!description || description === true) {
-    error('Missing migration description');
-  }
+  CONFIG = loadConfiguration();
 
   var timestamp = Date.now();
   var migrationName = timestamp + '-' + slug(description) + '.js';
@@ -135,7 +122,7 @@ function createMigration(description, cb) {
   var data = fs.readFileSync(template);
   fs.writeFileSync(filename, data);
   success('Created migration ' + migrationName);
-  cb();
+  process.exit();
 }
 
 function connnectDB() {
@@ -153,8 +140,11 @@ function getTimestamp(name) {
   return parseInt((name.split('-'))[0]);
 }
 
-function migrate(direction, number_of_migrations, cb) {
-  if (!number_of_migrations || number_of_migrations === true) {
+function migrate(direction, cb, number_of_migrations) {
+
+  CONFIG = loadConfiguration();
+
+  if (!number_of_migrations) {
     number_of_migrations = 1;
   }
 
