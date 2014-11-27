@@ -1,6 +1,6 @@
 {
   "name": "mongoose-migration",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Data migration tool for Mongoose",
   "main": "index.js",
   "scripts": {
