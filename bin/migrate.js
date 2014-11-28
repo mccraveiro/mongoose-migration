@@ -62,10 +62,10 @@ function loadConfiguration() {
   }
 }
 
-function updateTimestamp(timestamp) {
+function updateTimestamp(timestamp, cb) {
   CONFIG.current_timestamp = timestamp;
   var data = JSON.stringify(CONFIG, null, 2);
-  fs.writeFileSync(config_path, data);
+  fs.writeFile(config_path, data, cb);
 }
 
 function init() {
@@ -170,18 +170,21 @@ function migrate(direction, cb, number_of_migrations) {
 }
 
 function loopMigrations(direction, migrations, cb) {
-  if (direction > 0 && migrations.length !== 0) {
+
+  if (direction == 0 || migrations.length == 0) {
+    return cb();
+  }
+
+  if (direction > 0) {
     applyMigration('up', migrations.shift(), function () {
       direction--;
       loopMigrations(direction, migrations, cb);
     });
-  } else if (direction < 0 && migrations.length !== 0) {
+  } else if (direction < 0) {
     applyMigration('down', migrations.pop(), function () {
       direction++;
       loopMigrations(direction, migrations, cb);
     });
-  } else {
-    cb();
   }
 }
 
@@ -200,7 +203,6 @@ function applyMigration(direction, name, cb) {
       timestamp--;
     }
 
-    updateTimestamp(timestamp);
-    cb();
+    updateTimestamp(timestamp, cb);
   }
 }
