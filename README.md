@@ -15,7 +15,7 @@ npm install mongoose-migration --save
 
 ### Init configuration
 
-The following command should be executed a single time on the project root directory. It will create the `.migrate.json` configuration file.
+The following command should be executed a single time on the project root directory. It will create the `.migrate.js` configuration file.
 
 ```console
 migrate init
@@ -24,15 +24,16 @@ migrate init
 After creating it you need to edit and add the path to your models.
 
 Example:
-```json
-{
+```js
+var CONFIG = {
   "basepath": "migrations",
   "connection": "mongodb://localhost/db",
-  "current_timestamp": 0,
   "models": {
     "User": "models/user.js"
   }
 }
+
+module.exports = CONFIG;
 ```
 
 Note that on the previous example `models/user.js` is the model definition file. This file should exports the mongoose model definition.
@@ -141,6 +142,8 @@ or
 ```console
 migrate down [number of migrations to rollback]
 ```
+
+Note: the first time you migrate up or down a file called .timestamp.json will be created. I suggest you to ignore it in your .gitignore to have migration working on different machines.
 
 ### Help
 
