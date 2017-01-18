@@ -1,5 +1,3 @@
-#! /usr/bin/env node
-
 'use strict';
 
 var program = require('commander');
@@ -9,9 +7,14 @@ var slug = require('slug');
 var path = require('path');
 var fs = require('fs');
 
-var config_filename = '.migrate.json';
-var config_path = process.cwd() + '/' + config_filename;
+var config_path = process.cwd() + '/.migrate.js';
+
 var CONFIG;
+
+// The models should be shared between migration files
+var timestamp_path = process.cwd() + '/.timestamp.json';
+
+var timestamp_CONFIG;
 
 program
   .command('init')
@@ -34,10 +37,12 @@ program
   .action(migrate.bind(null, 'up', process.exit));
 
 program.version(require('../package.json').version);
+
 program.parse(process.argv);
+  
 
 // Default command ?
-if (program.rawArgs.length < 3) {
+if (program.args.length === 0) {
   migrate('up', process.exit, Number.POSITIVE_INFINITY);
 }
 
@@ -58,19 +63,29 @@ function loadConfiguration() {
   try {
     return require(config_path);
   } catch (e) {
-    error('Missing ' + config_filename + ' file. Type `migrate init` to create.');
+      error('Missing ' + config_path + ' file. Type `migrate init` to create.');
+    }
+}
+
+function timestampConfiguration() {
+  try {
+    return require(timestamp_path);
+  } catch (e) {
+    var data = JSON.stringify({ current_timestamp: 0 }, null, 2);
+      fs.writeFileSync(timestamp_path, data);
   }
 }
 
 function updateTimestamp(timestamp, cb) {
-  CONFIG.current_timestamp = timestamp;
-  var data = JSON.stringify(CONFIG, null, 2);
-  fs.writeFile(config_path, data, cb);
+  timestamp_CONFIG.current_timestamp = timestamp;
+  var data = JSON.stringify(timestamp_CONFIG, null, 2);
+  fs.writeFile(timestamp_path, data, cb);
 }
 
 function init() {
+  
   if (fs.existsSync(config_path)) {
-    error(config_filename + ' already exists!');
+    error(config_path + ' already exists!');
   }
 
   var schema = {
@@ -90,17 +105,15 @@ function init() {
 
   prompt.start();
   prompt.get(schema, function (error, result) {
-    CONFIG = {
-      basepath: result.basepath,
-      connection: result.connection,
-      current_timestamp: 0,
-      models: {}
-    };
 
-    var data = JSON.stringify(CONFIG, null, 2);
+    var data = fs.readFileSync(path.normalize(__dirname + '/../template/config.js'), 'ascii');
+    data = data
+      .replace('MIGRATION_KEY', result.basepath)
+      .replace('CONNECTION_KEY', result.connection);
+    
     fs.writeFileSync(config_path, data);
 
-    success(config_filename + ' file created!\nEdit it to include your models definitions');
+    success(config_path + ' file created!\nEdit to add your models');
     process.exit();
   });
 }
@@ -108,6 +121,7 @@ function init() {
 function createMigration(description) {
 
   CONFIG = loadConfiguration();
+  timestamp_CONFIG = timestampConfiguration();
 
   var timestamp = Date.now();
   var migrationName = timestamp + '-' + slug(description) + '.js';
@@ -143,7 +157,8 @@ function getTimestamp(name) {
 function migrate(direction, cb, number_of_migrations) {
 
   CONFIG = loadConfiguration();
-
+  timestamp_CONFIG = timestampConfiguration();
+  
   if (!number_of_migrations) {
     number_of_migrations = 1;
   }
@@ -155,14 +170,14 @@ function migrate(direction, cb, number_of_migrations) {
   var migrations = fs.readdirSync(CONFIG.basepath);
 
   connnectDB();
-
+  
   migrations = migrations.filter(function (migration_name) {
     var timestamp = getTimestamp(migration_name);
 
     if (number_of_migrations > 0) {
-      return timestamp > CONFIG.current_timestamp;
+      return timestamp > timestamp_CONFIG.current_timestamp;
     } else if (number_of_migrations < 0) {
-      return timestamp <= CONFIG.current_timestamp;
+      return timestamp <= timestamp_CONFIG.current_timestamp;
     }
   });
 
