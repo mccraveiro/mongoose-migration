@@ -15,11 +15,13 @@ npm install mongoose-migration --save
 
 ### Init configuration
 
-The following command should be executed a single time on the project root directory. It will create the `.migrate.json` configuration file.
+The following command should be executed on the project root directory. It will create a configuration file with the given `config-file` name, or `.migrate.json` if not especified.
 
 ```console
-migrate init
+migrate init [config-file]
 ```
+
+With this you can have a configuration file for each environment, for example: `.migrate.dev.json` and `.migrate.prod.json`
 
 After creating it you need to edit and add the path to your models.
 
@@ -129,6 +131,10 @@ or
 ```console
 migrate up [number of migrations to perform]
 ```
+You can specify which configuration file should be loaded with `-c <file>` or `--config <file>` option. If it is not specified, `.migrate.json` will be used.
+```console
+migrate up [number of migrations to perform] -c .migrate.dev.json
+```
 
 Note: By default `migrate` will execute all migrations created until now. However `migrate up` will only execute one migration.
 
@@ -141,6 +147,10 @@ or
 ```console
 migrate down [number of migrations to rollback]
 ```
+You can specify which configuration file should be loaded with `-c <file>` or `--config <file>` option. If it is not specified, `.migrate.json` will be used.
+```console
+migrate down [number of migrations to perform] -c .migrate.dev.json
+```
 
 ### Help
 
@@ -150,7 +160,6 @@ migrate -h
 
 ## Todo
 
-- Add environments (dev, production) on the configuration file
 - Add `migrate to [timestamp]`
 - Add tests
 
