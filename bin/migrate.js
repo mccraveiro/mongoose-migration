@@ -9,13 +9,20 @@ var slug = require('slug');
 var path = require('path');
 var fs = require('fs');
 
-var config_filename = '.migrate.json';
-var config_path = process.cwd() + '/' + config_filename;
+var config_filename;
+var config_path;
 var CONFIG;
 
 program
-  .command('init')
-  .description('Init migrations on current path')
+  .option(
+    '-c, --config <file>',
+    'config file for "up" and "down" commands (default = .migrate.json)',
+    '.migrate.json'
+  );
+
+program
+  .command('init [config-file]')
+  .description('Init migrations on current path (default = .migrate.json)')
   .action(init);
 
 program
@@ -55,6 +62,10 @@ function success(msg) {
 }
 
 function loadConfiguration() {
+  // load config filename from command line options
+  config_filename = program.config;
+  config_path = path.join(process.cwd(), config_filename);
+
   try {
     return require(config_path);
   } catch (e) {
@@ -68,11 +79,20 @@ function updateTimestamp(timestamp, cb) {
   fs.writeFile(config_path, data, cb);
 }
 
-function init() {
+function init(config_filename) {
+  // if no config_filename was passed as argument, set its
+  // value to '.migrate.json'
+  if (!config_filename) {
+    config_filename = '.migrate.json';
+  }
+
+  config_path = path.join(process.cwd(), config_filename);
+
   if (fs.existsSync(config_path)) {
     error(config_filename + ' already exists!');
   }
 
+  console.log('Configuration file to be created: ' + config_filename);
   var schema = {
     properties: {
       basepath: {
