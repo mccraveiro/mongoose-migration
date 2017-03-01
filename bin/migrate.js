@@ -9,9 +9,16 @@ var slug = require('slug');
 var path = require('path');
 var fs = require('fs');
 
-var config_filename = '.migrate.json';
-var config_path = process.cwd() + '/' + config_filename;
+var config_filename;
+var config_path;
 var CONFIG;
+
+program
+  .option(
+    '-c, --config <file>',
+    'config file for "up" and "down" commands (default = .migrate.json)',
+    '.migrate.json'
+  );
 
 program
   .command('init')
@@ -55,6 +62,10 @@ function success(msg) {
 }
 
 function loadConfiguration() {
+  // load config filename from command line options
+  config_filename = program.config;
+  config_path = path.join(process.cwd(), config_filename);
+
   try {
     return require(config_path);
   } catch (e) {
