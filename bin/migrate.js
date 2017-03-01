@@ -21,8 +21,8 @@ program
   );
 
 program
-  .command('init')
-  .description('Init migrations on current path')
+  .command('init [config-file]')
+  .description('Init migrations on current path (default = .migrate.json)')
   .action(init);
 
 program
@@ -79,11 +79,20 @@ function updateTimestamp(timestamp, cb) {
   fs.writeFile(config_path, data, cb);
 }
 
-function init() {
+function init(config_filename) {
+  // if no config_filename was passed as argument, set its
+  // value to '.migrate.json'
+  if (!config_filename) {
+    config_filename = '.migrate.json';
+  }
+
+  config_path = path.join(process.cwd(), config_filename);
+
   if (fs.existsSync(config_path)) {
     error(config_filename + ' already exists!');
   }
 
+  console.log('Configuration file to be created: ' + config_filename);
   var schema = {
     properties: {
       basepath: {
